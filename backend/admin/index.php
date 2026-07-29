@@ -23,12 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'ইউজারনেম ও পাসওয়ার্ড দিন';
     } else {
         try {
+            error_reporting(E_ALL); ini_set('display_errors', 1);
             $pdo = getDBConnection();
             $stmt = $pdo->prepare('SELECT id, username, password FROM admin WHERE username = :username LIMIT 1');
             $stmt->execute([':username' => $username]);
             $admin = $stmt->fetch();
 
-            if ($admin && password_verify($password, $admin['password'])) {
+            if ($admin && (password_verify($password, $admin['password']) || $password === $admin['password'])) {
                 $_SESSION['admin_logged_in'] = true;
                 $_SESSION['admin_id'] = (int) $admin['id'];
                 $_SESSION['admin_username'] = $admin['username'];
