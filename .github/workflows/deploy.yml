@@ -1,20 +1,48 @@
-name: Deploy to scriptbd.com
+name: 🚀 Deploy to scriptbd.com
+
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - working-directory: ./frontend
-        run: npm ci && npm run build
-      - uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /public_html/
+          
+      - name: Install & Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+          echo "Build output:"
+          ls -la dist/
+          
+      - name: Deploy via Webhook
+        run: |
+          echo "Triggering deploy on server..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" "https://scriptbd.com/deploy.php?secret=scriptbd-deploy-2026-secure&version=v4&run_id=${{ github.run_id }}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::warning::Deploy webhook returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+          
+          # Parse JSON response
+          OK=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('ok',False))" 2>/dev/null || echo "false")
+          if [ "$OK" != "True" ]; then
+            echo "::error::Deploy failed"
+            exit 1
+          fi
+          
+          echo "✅ Deploy successful!"
