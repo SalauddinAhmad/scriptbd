@@ -11,5 +11,6 @@ jobs:
     steps:
       - name: Trigger Deploy
         run: |
-          RESP=$(curl -sS "https://scriptbd.com/_deploy.php?secret=***" -H "User-Agent: GitHub-Actions")
+          RESP=$(curl -sS "https://scriptbd.com/_deploy.php?secret=sbd2026deploy" -H "User-Agent: GitHub-Actions")
+          echo "Server Output: $RESP"
           echo "$RESP" | python3 -c "import sys,json;d=json.load(sys.stdin);print('\n'.join(d.get('log',[])));exit(0 if d.get('ok') else 1)" && echo "✅ LIVE!" || (echo "❌ FAIL"; exit 1)
