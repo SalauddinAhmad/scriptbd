@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 /**
  * ScriptBD — Professional Admin Dashboard v4
  * Smart & Creative Management Panel
@@ -8,6 +11,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     header('Location: index.php'); exit;
 }
 require_once __DIR__ . '/../config/database.php';
+
 
 // ─── AJAX Actions ───
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
