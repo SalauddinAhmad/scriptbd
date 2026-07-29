@@ -1,87 +1,145 @@
-# 📜 ScriptBD — বাংলা ভিডিও স্ক্রিপ্ট মার্কেটপ্লেস
+<p align="center">
+  <img src="https://img.shields.io/badge/STATUS-LIVE-brightgreen?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/REACT-18-61dafb?style=for-the-badge&logo=react" />
+  <img src="https://img.shields.io/badge/PHP-8.1+-777bb4?style=for-the-badge&logo=php" />
+  <img src="https://img.shields.io/badge/MYSQL-8-4479A1?style=for-the-badge&logo=mysql" />
+  <img src="https://img.shields.io/badge/LICENSE-MIT-green?style=for-the-badge" />
+</p>
 
-[![Deploy](https://github.com/SalauddinAhmad/scriptbd/actions/workflows/deploy.yml/badge.svg)](https://github.com/SalauddinAhmad/scriptbd/actions)
-[![PHP](https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php)](https://php.net)
-[![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+<h1 align="center">
+  📜 ScriptBD
+</h1>
 
-**ScriptBD** — বাংলাদেশের প্রথম বাংলা ভিডিও স্ক্রিপ্ট বিক্রির প্ল্যাটফর্ম। ইউটিউবার, ফেসবুক ক্রিয়েটর ও টিকটকারদের জন্য রেডিমেড ভাইরাল স্ক্রিপ্ট।
+<p align="center">
+  <b>বাংলাদেশের #1 বাংলা ভিডিও স্ক্রিপ্ট মার্কেটপ্লেস</b><br/>
+  <sub>ইউটিউবার, ফেসবুক ক্রিয়েটর ও কন্টেন্ট ক্রিয়েটরদের জন্য রেডিমেড ভাইরাল স্ক্রিপ্ট</sub>
+</p>
 
-🌐 **[scriptbd.com](https://scriptbd.com)** — লাইভ সাইট
+<p align="center">
+  <a href="https://scriptbd.com" target="_blank">
+    <img src="https://img.shields.io/badge/🌐_LIVE_WEBSITE-scriptbd.com-ff6b35?style=for-the-badge&logo=googlechrome" />
+  </a>
+  &nbsp;
+  <a href="https://github.com/SalauddinAhmad/scriptbd/actions" target="_blank">
+    <img src="https://img.shields.io/github/actions/workflow/status/SalauddinAhmad/scriptbd/deploy.yml?style=for-the-badge&label=DEPLOY" />
+  </a>
+</p>
 
----
-
-## ✨ ফিচারসমূহ
-
-### 🛒 ফ্রন্টএন্ড (React 18 + Vite)
-- 🎨 **ডার্ক থিম** — Glassmorphism + Animated Background
-- 📱 **Fully Responsive** — Mobile, Tablet, Desktop
-- 📦 **৩টি প্ল্যান** — YouTube Shorts, Facebook Reels, YouTube Full
-- 💳 **পেমেন্ট গেটওয়ে** — bKash, Nagad, Rocket + TrxID ভেরিফিকেশন
-- 🔍 **SEO Optimized** — Bengali meta tags, Open Graph
-- ⚡ **Vite Build** — Lightning fast production build
-
-### 👨‍💼 অ্যাডমিন প্যানেল
-- 📊 **Revenue Dashboard** — মোট আয়, আজকের আয়, মাসিক রিপোর্ট
-- 📋 **Order Management** — Filter, Search, Sort, Pagination
-- 💳 **Payment Verification** — One-click verify + bulk action
-- 📦 **Delivery Tracking** — Mark delivered, status flow timeline
-- 📝 **Admin Notes** — প্রতি অর্ডারে প্রাইভেট নোট
-- 🎨 **Premium UI** — Inter font, Phosphor Icons, Indigo accent
-
-### ⚙️ ব্যাকএন্ড (PHP 8.1+)
-- 🔐 **Session-based Auth** — Secure admin login
-- 🗄️ **MySQL Database** — PDO prepared statements
-- 📡 **REST API** — JSON responses, CORS enabled
-- 🛡️ **Security** — SQL injection protection, XSS prevention
+<br/>
 
 ---
 
-## 🏗️ টেক স্ট্যাক
+## 🌟 কেন ScriptBD?
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 18, Vite, CSS3 |
-| **Backend** | PHP 8.1+, MySQL |
-| **Hosting** | cPanel (LiteSpeed) |
-| **Deploy** | GitHub Actions → Webhook |
-| **Icons** | Phosphor Icons |
-| **Fonts** | Inter + Noto Sans Bengali |
+<table>
+<tr>
+  <td width="50%">
+    <h3>🎬 ক্রিয়েটরদের জন্য</h3>
+    <ul>
+      <li>✅ <b>রেডিমেড ভাইরাল স্ক্রিপ্ট</b> — কিনুন, কাস্টমাইজ করুন, ভিডিও বানান</li>
+      <li>✅ <b>৩টি প্রিমিয়াম প্ল্যান</b> — YouTube Shorts, Facebook Reels, YouTube Full</li>
+      <li>✅ <b>বাংলায় টপিক</b> — সব স্ক্রিপ্ট বাংলা ভাষায়</li>
+      <li>✅ <b>ইনস্ট্যান্ট অর্ডার</b> — TrxID দিয়ে সহজ পেমেন্ট</li>
+      <li>✅ <b>২৪/৭ সাপোর্ট</b> — অর্ডার সংক্রান্ত যেকোনো সাহায্য</li>
+    </ul>
+  </td>
+  <td width="50%">
+    <h3>🛠️ টেকনিক্যাল হাইলাইটস</h3>
+    <ul>
+      <li>⚛️ <b>React 18 + Vite</b> — Blazing fast frontend</li>
+      <li>🐘 <b>PHP 8.1+</b> — Robust backend API</li>
+      <li>🗄️ <b>MySQL 8</b> — Reliable data storage</li>
+      <li>🚀 <b>Auto-Deploy</b> — git push = live update</li>
+      <li>🔒 <b>Secure</b> — PDO prepared statements, XSS protection</li>
+      <li>📱 <b>Responsive</b> — Mobile, tablet, desktop ready</li>
+    </ul>
+  </td>
+</tr>
+</table>
 
 ---
 
-## 📁 প্রজেক্ট স্ট্রাকচার
+## 📊 অ্যাডমিন ড্যাশবোর্ড
+
+<p align="center">
+  <b>এক পেজেই সব ম্যানেজমেন্ট!</b>
+</p>
+
+| ফিচার | বর্ণনা |
+|:---:|---|
+| 📊 | **Revenue Analytics** — মোট আয়, আজকের আয়, মাসিক রিপোর্ট |
+| 📋 | **Order Management** — Filter, Search, Sort, Pagination |
+| 💳 | **Payment Verification** — One-click verify + Bulk action |
+| 📦 | **Delivery Tracking** — Status flow timeline (Order → Paid → Delivered) |
+| 📝 | **Admin Notes** — প্রতি অর্ডারে প্রাইভেট নোট |
+| 🎨 | **Premium UI** — Inter font, Phosphor Icons, Glassmorphism |
+
+---
+
+## 🏗️ প্রজেক্ট স্ট্রাকচার
 
 ```
 scriptbd/
-├── frontend/               # React Frontend
+│
+├── frontend/                    # ⚛️ React 18 + Vite
 │   ├── src/
-│   │   ├── components/     # React Components
-│   │   │   ├── Home.jsx
-│   │   │   ├── Pricing.jsx
-│   │   │   ├── OrderModal.jsx
-│   │   │   └── Admin.jsx
-│   │   ├── api/            # API Client
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── dist/               # Production Build
-│   └── vite.config.js
-├── backend/                # PHP Backend
+│   │   ├── components/         # UI Components
+│   │   │   ├── Home.jsx        # Landing page
+│   │   │   ├── Pricing.jsx     # Plan pricing cards
+│   │   │   ├── OrderModal.jsx  # Order form modal
+│   │   │   └── Admin.jsx       # Admin panel (React)
+│   │   ├── api/                # API client
+│   │   │   └── index.js
+│   │   ├── App.jsx             # Main app
+│   │   └── main.jsx            # Entry point
+│   ├── dist/                   # 📦 Production build
+│   ├── vite.config.js
+│   └── package.json
+│
+├── backend/                     # 🐘 PHP 8.1+
 │   ├── admin/
-│   │   ├── index.php       # Login + Dashboard (ONE FILE)
+│   │   ├── index.php           # 🔐 Login + Dashboard (ALL-IN-ONE)
 │   │   └── logout.php
 │   ├── api/
-│   │   ├── auth/login.php
-│   │   ├── orders/
-│   │   └── payments/
+│   │   ├── auth/
+│   │   │   └── login.php       # Authentication
+│   │   ├── orders/             # Order CRUD API
+│   │   └── payments/           # Payment API
 │   ├── config/
-│   │   └── database.php
-│   └── .htaccess
-├── deploy.php              # Auto-Deploy Webhook
+│   │   ├── database.php        # DB configuration
+│   │   └── helpers.php         # Utility functions
+│   └── .htaccess               # Server config
+│
+├── deploy.php                   # 🚀 Auto-deploy webhook (OLD)
+├── _deploy.php                  # 🚀 Auto-deploy webhook (NEW)
 ├── .github/workflows/
-│   └── deploy.yml          # CI/CD Pipeline
-└── README.md
+│   └── deploy.yml              # ⚡ CI/CD Pipeline
+├── README.md                    # 📖 Documentation
+└── LICENSE                      # 📄 MIT License
 ```
+
+---
+
+## 💳 পেমেন্ট সিস্টেম
+
+<table align="center">
+<tr>
+  <td align="center"><b>bKash</b><br/><sub>বিকাশ</sub></td>
+  <td align="center"><b>Nagad</b><br/><sub>নগদ</sub></td>
+  <td align="center"><b>Rocket</b><br/><sub>রকেট</sub></td>
+</tr>
+<tr>
+  <td align="center">✅</td>
+  <td align="center">✅</td>
+  <td align="center">✅</td>
+</tr>
+</table>
+
+**কিভাবে কাজ করে:**
+1. গ্রাহক প্ল্যান সিলেক্ট করে → অর্ডার ফর্ম পূরণ করে
+2. bKash/Nagad/Rocket-এ পেমেন্ট করে
+3. **TrxID** দিয়ে অর্ডার submit করে
+4. অ্যাডমিন TrxID ভেরিফাই করে → **One-click deliver!**
 
 ---
 
@@ -90,58 +148,46 @@ scriptbd/
 ### Auto-Deploy (GitHub Actions)
 ```bash
 git push origin main
-# → GitHub Actions triggers
-# → Build React frontend
-# → Deploy via webhook
-# → scriptbd.com LIVE! 🔥
+```
+```
+→ GitHub Actions triggers
+→ curl _deploy.php?secret=***
+→ Server downloads latest code from GitHub
+→ auto-extracts + deploys
+→ ✅ scriptbd.com LIVE!
 ```
 
-### Manual Deploy
-1. cPanel → File Manager → upload files
-2. Set database credentials in `backend/config/database.php`
-3. Import `database/schema.sql` via phpMyAdmin
-
----
-
-## 📊 অ্যাডমিন অ্যাক্সেস
-
-| Field | Value |
-|-------|-------|
-| **URL** | `https://scriptbd.com/backend/admin/` |
-| **Username** | `admin` |
-| **Password** | `admin123` |
-
----
-
-## 🔐 Environment Variables
-
-```php
-// backend/config/database.php
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'your_database');
-define('DB_USER', 'your_username');
-define('DB_PASS', 'your_password');
-```
-
----
-
-## 📝 ডেভেলপমেন্ট
-
+### Manual Setup
 ```bash
 # Clone
 git clone https://github.com/SalauddinAhmad/scriptbd.git
 cd scriptbd
 
-# Frontend
-cd frontend
-npm install
-npm run dev      # Development server
-npm run build    # Production build
+# Frontend build
+cd frontend && npm install && npm run build
 
-# Backend (PHP built-in server for testing)
-cd backend
-php -S localhost:8000
+# Upload to cPanel
+# → public_html/ ← frontend/dist/*
+# → public_html/backend/ ← backend/*
 ```
+
+---
+
+## 🔐 অ্যাডমিন
+
+| | |
+|---|---|
+| **URL** | `https://scriptbd.com/backend/admin/` |
+| **User** | `admin` |
+| **Pass** | `admin123` |
+
+---
+
+## 📈 টেক স্ট্যাক
+
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=react,vite,php,mysql,html,css,js,git,github,linux" />
+</p>
 
 ---
 
@@ -151,10 +197,16 @@ Pull requests welcome! বড় পরিবর্তনের আগে issue 
 
 ---
 
-## 📄 লাইসেন্স
+## 👨‍💻 ডেভেলপার
 
-MIT © [Salauddin Ahmad](https://github.com/SalauddinAhmad)
+**Salauddin Ahmad**
+
+- 🐙 [GitHub](https://github.com/SalauddinAhmad)
+- 🌐 [Portfolio](https://scriptbd.com)
+- 📍 Dhaka, Bangladesh 🇧🇩
 
 ---
 
-**Made with ❤️ in Dhaka, Bangladesh 🇧🇩**
+<p align="center">
+  <sub>Made with ❤️ in Bangladesh | © 2026 ScriptBD</sub>
+</p>
