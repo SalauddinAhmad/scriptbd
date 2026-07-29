@@ -1,84 +1,71 @@
 <?php
 /**
- * ScriptBD Auto-Deploy
- * GitHub Actions POSTs a tar.gz → deploy.php extracts to public_html
+ * ScriptBD Auto-Deploy — Downloads from GitHub ZIP
  */
-define('SECRET', 'scriptbd-deploy-2026-secure');
-define('TARGET_DIR', '/home/scriptbd_ag/public_html');
+define('SECRET', 'script…cure');
+define('TARGET', '/home/scriptbd_ag/public_html');
 header('Content-Type: application/json');
 date_default_timezone_set('Asia/Dhaka');
 
-// Verify
 $secret = $_GET['secret'] ?? $_SERVER['HTTP_X_DEPLOY_SECRET'] ?? '';
 if ($secret !== SECRET) { http_response_code(403); die('{"ok":false,"error":"unauthorized"}'); }
 
-$log = ["[" . date('Y-m-d H:i:s') . "] Deploy started"];
+$log = ["[" . date('H:i:s') . "] Deploy start"];
+$tmp = "/tmp/sbd-" . time();
+mkdir($tmp, 0755, true);
 
-// Get uploaded file
-if (!isset($_FILES['package']) || $_FILES['package']['error'] !== UPLOAD_ERR_OK) {
-    $log[] = "ERROR: No package uploaded (error=" . ($_FILES['package']['error']??'none').")";
-    echo json_encode(['ok'=>false,'log'=>$log,'files'=>array_keys($_FILES)]);
-    exit(1);
-}
-
-$tmp = $_FILES['package']['tmp_name'];
-$size = filesize($tmp);
-$log[] = "Package: " . round($size/1024) . " KB";
-
-// Copy to /tmp for extraction
-$tmp_dir = "/tmp/scriptbd-deploy-" . time();
-mkdir($tmp_dir, 0755, true);
-$tgz_file = $tmp_dir . "/deploy.tar.gz";
-move_uploaded_file($tmp, $tgz_file);
-$log[] = "Saved to " . $tgz_file;
+// Download ZIP
+$zip = $tmp . "/repo.zip";
+$data = file_get_contents("https://github.com/SalauddinAhmad/scriptbd/archive/refs/heads/main.zip");
+if (!$data) { echo json_encode(['ok'=>false,'log'=>['Download failed']]); exit(1); }
+file_put_contents($zip, $data);
+$log[] = "Downloaded " . round(strlen($data)/1024) . "KB";
 
 // Extract
-$phar = new PharData($tgz_file);
-$phar->extractTo($tmp_dir);
-$log[] = "Extracted";
+$za = new ZipArchive;
+$za->open($zip);
+$za->extractTo($tmp);
+$za->close();
 
-// Copy files to target
-$iter = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator($tmp_dir, RecursiveDirectoryIterator::SKIP_DOTS),
-    RecursiveIteratorIterator::SELF_FIRST
-);
-
-$count = 0;
-$skip_prefixes = ['deploy.tar.gz'];
-foreach ($iter as $item) {
-    $rel = str_replace($tmp_dir . '/', '', $item->getPathname());
-    
-    // Skip the package itself
-    $skip = false;
-    foreach ($skip_prefixes as $pf) {
-        if (strpos($rel, $pf) === 0) { $skip = true; break; }
-    }
-    if ($skip) continue;
-    
-    $dest = (strpos($rel, 'backend/') === 0) 
-        ? TARGET_DIR . '/' . $rel 
-        : TARGET_DIR . '/' . $rel;
-    
-    if ($item->isDir()) {
-        @mkdir($dest, 0755, true);
-    } else {
-        @copy($item->getPathname(), $dest);
-        $count++;
-    }
+// Find extracted dir
+$src = '';
+foreach (scandir($tmp) as $d) {
+    if ($d[0] !== '.' && is_dir("$tmp/$d")) { $src = "$tmp/$d"; break; }
 }
-$log[] = "Copied $count files";
 
-// Also copy index.html from root if it exists in extracted content
-foreach (['index.html'] as $root_file) {
-    $src = $tmp_dir . '/' . $root_file;
-    if (file_exists($src)) {
-        copy($src, TARGET_DIR . '/' . $root_file);
-        $log[] = "Copied $root_file";
+// Deploy function
+function deployDir($src, $target, &$log, $label) {
+    if (!is_dir($src)) { $log[] = "$label: not found"; return 0; }
+    $cnt = 0;
+    $iter = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($src, RecursiveDirectoryIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+    foreach ($iter as $f) {
+        $rel = str_replace($src . '/', '', $f->getPathname());
+        $dest = rtrim($target, '/') . '/' . $rel;
+        if ($f->isDir()) { @mkdir($dest, 0755, true); }
+        else { @copy($f->getPathname(), $dest); $cnt++; }
     }
+    $log[] = "$label: $cnt files";
+    return $cnt;
+}
+
+// Deploy frontend dist
+$total = deployDir("$src/frontend/dist", TARGET, $log, "Frontend");
+
+// Deploy backend
+$total += deployDir("$src/backend", TARGET . "/backend", $log, "Backend");
+
+// Deploy root index.html
+foreach (glob("$src/*.html") as $f) {
+    $name = basename($f);
+    @copy($f, TARGET . "/$name");
+    $log[] = "Copied $name";
 }
 
 // Cleanup
-exec("rm -rf $tmp_dir");
-$log[] = "Done!";
+exec("rm -rf $tmp");
+$log[] = "Done! $total total files";
 
-echo json_encode(['ok'=>true,'count'=>$count,'log'=>$log,'time'=>date('Y-m-d H:i:s')]);
+echo json_encode(['ok'=>true, 'files'=>$total, 'log'=>$log], JSON_UNESCAPED_UNICODE);

@@ -1,0 +1,47 @@
+# ScriptBD - Root .htaccess
+# Handles: SPA routing, API proxy, PHP admin, security
+
+# Enable Rewrite
+RewriteEngine On
+
+# --- CORS Headers ---
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, X-API-Key, Authorization"
+</IfModule>
+
+# Handle OPTIONS preflight
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=204,L]
+
+# --- API Routes: /api/* -> backend/api/* ---
+RewriteRule ^api/(.*)$ backend/api/$1 [QSA,L]
+
+# --- PHP Admin Routes: /admin/* -> backend/admin/* ---
+RewriteRule ^admin/?$ backend/admin/index.php [L]
+RewriteRule ^admin/(.*)$ backend/admin/$1 [L]
+
+# --- Static assets (skip rewrite for real files) ---
+RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|txt|xml|json|pdf)$
+RewriteRule ^ - [L]
+
+# --- Deny access to sensitive files ---
+<FilesMatch "(config\.php|helpers\.php|database\.php|schema\.sql)">
+    Order deny,allow
+    Deny from all
+</FilesMatch>
+
+# --- SPA Fallback: all non-file routes -> index.html ---
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/backend/
+RewriteRule ^ index.html [L]
+
+# --- Security ---
+Options -Indexes
+AddDefaultCharset UTF-8
+
+# PHP settings
+php_flag display_errors Off
+php_value error_reporting 0
