@@ -1,118 +1,114 @@
 <?php
 /**
- * ScriptBD Auto-Deploy — SIMPLE & RELIABLE
- * No secret issues. Downloads from GitHub. Deploys.
+ * ScriptBD Auto-Deploy
+ * Server downloads from GitHub → extracts → deploys
+ * Trigger: GET with correct secret. No file upload needed.
  */
-define("TARGET","/home/scriptbd/public_html");
+define("SECRET","sbd2026deploy");
 header("Content-Type: application/json; charset=utf-8");
 date_default_timezone_set("Asia/Dhaka");
 
-$log = ["[" . date("H:i:s") . "] Auto-deploy started"];
+$secret = $_GET["secret"] ?? "";
+if ($secret !== SECRET) { http_response_code(403); die('{"ok":false,"error":"bad secret"}'); }
 
-// Download latest from GitHub
-$tmp = "/tmp/sbd-auto-" . time();
+$log = ["[" . date("H:i:s") . "] Deploy started - downloading from GitHub"];
+$tmp = "/tmp/sbd-dep-" . time();
 @mkdir($tmp, 0755, true);
-$zip = $tmp . "/repo.zip";
 
-// Use GitHub's API zipball (always fresh, no cache)
-$ctx = stream_context_create([
-    "http" => [
-        "method" => "GET",
-        "header" => "User-Agent: ScriptBD-Deploy/2.0
-",
-        "timeout" => 30,
-        "follow_location" => 1
-    ]
-]);
+// Download from GitHub (codeload - no cache, always fresh)
+$ctx = stream_context_create(["http" => ["method"=>"GET","header"=>"User-Agent: ScriptBD-Deploy
+","timeout"=>30,"follow_location"=>1]]);
+$url = "https://codeload.github.com/SalauddinAhmad/scriptbd/zip/refs/heads/main";
+$data = @file_get_contents($url, false, $ctx);
 
-$data = @file_get_contents("https://api.github.com/repos/SalauddinAhmad/scriptbd/zipball/main", false, $ctx);
+// Fallback
 if (!$data) {
-    // Fallback to regular ZIP
-    $data = @file_get_contents("https://github.com/SalauddinAhmad/scriptbd/archive/refs/heads/main.zip", false, $ctx);
-}
-if (!$data) {
-    echo json_encode(["ok" => false, "log" => ["Download FAILED"]]);
-    exit(1);
+    $url = "https://github.com/SalauddinAhmad/scriptbd/archive/refs/heads/main.zip";
+    $data = @file_get_contents($url, false, $ctx);
 }
 
-file_put_contents($zip, $data);
-$log[] = "Downloaded " . round(strlen($data) / 1024) . " KB";
+if (!$data) {
+    $log[] = "ERROR: Download failed from both sources";
+    echo json_encode(["ok"=>false,"log"=>$log], JSON_UNESCAPED_UNICODE); exit(1);
+}
+
+file_put_contents("$tmp/repo.zip", $data);
+$log[] = "Downloaded " . round(strlen($data)/1024) . " KB";
 
 // Extract
-$z = new ZipArchive;
-if ($z->open($zip) !== TRUE) {
-    echo json_encode(["ok" => false, "log" => ["ZIP extract FAILED"]]);
-    exit(1);
+$zip = new ZipArchive;
+if ($zip->open("$tmp/repo.zip") !== TRUE) {
+    $log[] = "ERROR: Cannot open ZIP";
+    echo json_encode(["ok"=>false,"log"=>$log], JSON_UNESCAPED_UNICODE); exit(1);
 }
-$z->extractTo($tmp);
-$z->close();
+$zip->extractTo($tmp);
+$zip->close();
 
-// Find source directory
+// Find source folder (scriptbd-main or SalauddinAhmad-scriptbd-XXXXX)
 $src = "";
 foreach (scandir($tmp) as $d) {
     if ($d[0] !== "." && is_dir("$tmp/$d")) { $src = "$tmp/$d"; break; }
 }
 if (!$src) {
-    echo json_encode(["ok" => false, "log" => ["No source dir found"]]);
-    exit(1);
+    $log[] = "ERROR: No source dir in ZIP";
+    echo json_encode(["ok"=>false,"log"=>$log], JSON_UNESCAPED_UNICODE); exit(1);
 }
 $log[] = "Extracted: " . basename($src);
 
-// Wipe old files (KEEP deploy.php and cgi-bin)
-$wiped = 0;
-foreach (scandir(TARGET) as $f) {
+// TARGET
+$target = $_SERVER["DOCUMENT_ROOT"] ?: "/home/scriptbd/public_html";
+$log[] = "Target: $target";
+
+// Wipe old files (keep deploy.php, cgi-bin, .well-known)
+$w = 0;
+foreach (scandir($target) as $f) {
     if ($f === "." || $f === "..") continue;
-    if ($f === "deploy.php" || $f === "cgi-bin" || $f === ".well-known") continue;
-    $p = TARGET . "/" . $f;
+    if (in_array($f, ["deploy.php","cgi-bin",".well-known","upload-deploy.php"])) continue;
+    $p = $target . "/" . $f;
     try {
         if (is_dir($p)) {
-            $it = new RecursiveDirectoryIterator($p, RecursiveDirectoryIterator::SKIP_DOTS);
-            $fit = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
-            foreach ($fit as $item) {
-                $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
-            }
+            $ri = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($p, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::CHILD_FIRST
+            );
+            foreach ($ri as $item) $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
             @rmdir($p);
-        } else {
-            @unlink($p);
-            $wiped++;
-        }
+        } else { @unlink($p); $w++; }
     } catch (Exception $e) {}
 }
-$log[] = "Cleaned " . $wiped . " old files";
+$log[] = "Cleaned $w old files";
 
 // Copy function
-function cpAll($from, $to, &$count) {
+function cpAll($from, $to, &$n) {
     if (!is_dir($from)) return;
     @mkdir($to, 0755, true);
     foreach (scandir($from) as $f) {
         if ($f === "." || $f === "..") continue;
-        $sf = $from . "/" . $f;
-        $df = $to . "/" . $f;
-        if (is_dir($sf)) { cpAll($sf, $df, $count); }
-        else { @copy($sf, $df); $count++; }
+        $sf = $from . "/" . $f; $df = $to . "/" . $f;
+        if (is_dir($sf)) cpAll($sf, $df, $n);
+        else { @copy($sf, $df); $n++; }
     }
 }
 
-// Copy frontend/dist
-$fcount = 0;
-cpAll("$src/frontend/dist", TARGET, $fcount);
-$log[] = "Frontend: " . $fcount . " files";
+// Deploy frontend/dist
+$fc = 0;
+cpAll("$src/frontend/dist", $target, $fc);
+$log[] = "Frontend: $fc files";
 
-// Copy backend
-$bcount = 0;
-cpAll("$src/backend", TARGET . "/backend", $bcount);
-$log[] = "Backend: " . $bcount . " files";
+// Deploy backend
+$bc = 0;
+cpAll("$src/backend", "$target/backend", $bc);
+$log[] = "Backend: $bc files";
 
-// Copy .htaccess from dist
-$hta = "$src/frontend/dist/.htaccess";
-if (file_exists($hta)) {
-    @copy($hta, TARGET . "/.htaccess");
+// Copy .htaccess
+if (file_exists("$src/frontend/dist/.htaccess")) {
+    @copy("$src/frontend/dist/.htaccess", "$target/.htaccess");
+    $log[] = "Copied .htaccess";
 }
 
 // Cleanup
 exec("rm -rf $tmp");
+$total = $fc + $bc;
+$log[] = "✅ DEPLOYED: $total files → scriptbd.com";
 
-$total = $fcount + $bcount;
-$log[] = "✅ DEPLOY COMPLETE: " . $total . " files";
-
-echo json_encode(["ok" => true, "files" => $total, "log" => $log], JSON_UNESCAPED_UNICODE);
+echo json_encode(["ok"=>true, "files"=>$total, "wiped"=>$w, "log"=>$log], JSON_UNESCAPED_UNICODE);
