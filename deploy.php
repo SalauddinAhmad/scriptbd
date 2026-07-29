@@ -1,54 +1,55 @@
 <?php
 define("SECRET","***");
-define("TARGET","/home/scriptbd_ag/public_html");
 header("Content-Type: application/json; charset=utf-8");
 
 if(($_GET["secret"]??"")!==SECRET) {http_response_code(403);die('{"ok":false}');}
 
-$log=[];
+// AUTO-DETECT target path
+$TARGET = $_SERVER["DOCUMENT_ROOT"];
+if(!$TARGET || !is_dir($TARGET)) {
+  // Try common cPanel paths
+  $user = get_current_user();
+  foreach(["/home/$user/public_html","/home/script…/public_html","/home/scriptbd/public_html"] as $try) {
+    if(is_dir($try)) { $TARGET=$try; break; }
+  }
+}
+
+$log=["TARGET=$TARGET","USER=".get_current_user(),"DOCROOT=".$_SERVER["DOCUMENT_ROOT"]];
+
+// Download from GitHub
 $tmp="/tmp/sbd-".time();
 mkdir($tmp,0755,true);
-$zip=$tmp."/repo.zip";
-
-// Download
 $data=@file_get_contents("https://github.com/SalauddinAhmad/scriptbd/archive/refs/heads/main.zip");
-if(!$data){die(json_encode(["ok"=>false,"error"=>"download failed"]));}
-file_put_contents($zip,$data);
+if(!$data){die(json_encode(["ok"=>false,"log"=>$log,"error"=>"download failed"]));}
+file_put_contents($tmp."/repo.zip",$data);
 $log[]="Downloaded ".round(strlen($data)/1024)."KB";
 
-// Extract  
+// Extract
 $z=new ZipArchive;
-$z->open($zip);
+$z->open($tmp."/repo.zip");
 $z->extractTo($tmp);
 $z->close();
 
-// Find src dir
 $src="";
 foreach(scandir($tmp) as $d){
   if($d[0]!=="." && is_dir("$tmp/$d")){$src="$tmp/$d";break;}
 }
 $log[]="Extracted: $src";
 
-// WIPE old files (keep deploy.php only)
-$log[]="Cleaning...";
+// WIPE old files
 $w=0;
-foreach(scandir(TARGET) as $name){
+foreach(scandir($TARGET) as $name){
   if($name==="."||$name==="..")continue;
-  if($name==="deploy.php"||$name==="cgi-bin")continue;
-  $p=TARGET."/".$name;
+  if($name==="deploy.php"||$name==="cgi-bin"||$name==="error_log")continue;
+  $p=$TARGET."/".$name;
   try{
-    if(is_dir($p)){
-      array_map("unlink",glob("$p/*.*"));
-      @rmdir($p);
-    }else{
-      @unlink($p);
-      $w++;
-    }
+    if(is_dir($p)){array_map("unlink",glob("$p/*.*"));@rmdir($p);}
+    else{@unlink($p);$w++;}
   }catch(Exception $e){}
 }
-$log[]="Wiped $w";
+$log[]="Wiped $w files";
 
-// Copy frontend/dist  
+// Copy
 function cpdir($from,$to,&$n){
   if(!is_dir($from))return;
   @mkdir($to,0755,true);
@@ -62,15 +63,17 @@ function cpdir($from,$to,&$n){
 }
 
 $count=0;
-cpdir("$src/frontend/dist",TARGET,$count);
-$log[]="Frontend: $count files";
+cpdir("$src/frontend/dist",$TARGET,$count);
+$log[]="Frontend: $count";
 
-$bcount=0;  
-cpdir("$src/backend",TARGET."/backend",$bcount);
-$log[]="Backend: $bcount files";
+$bcount=0;
+cpdir("$src/backend",$TARGET."/backend",$bcount);
+$log[]="Backend: $bcount";
 
-// Cleanup
 exec("rm -rf $tmp");
-$log[]="DONE! ".($count+$bcount)." files";
+$log[]="DONE! ".($count+$bcount)." total";
 
-echo json_encode(["ok"=>true,"files"=>$count+$bcount,"log"=>$log],JSON_UNESCAPED_UNICODE);
+// List final dir
+$files=implode(", ",array_diff(scandir($TARGET),["..","."]));
+
+echo json_encode(["ok"=>true,"files"=>$count+$bcount,"log"=>$log,"dir"=>$files],JSON_UNESCAPED_UNICODE);
