@@ -1,107 +1,76 @@
 <?php
-define("SECRET", "***");
-define("TARGET", "/home/scriptbd_ag/public_html");
-
+define("SECRET","***");
+define("TARGET","/home/scriptbd_ag/public_html");
 header("Content-Type: application/json; charset=utf-8");
-date_default_timezone_set("Asia/Dhaka");
 
-$s = $_GET["secret"] ?? "";
-if ($s !== SECRET) { http_response_code(403); die('{"ok":false,"error":"bad secret"}'); }
+if(($_GET["secret"]??"")!==SECRET) {http_response_code(403);die('{"ok":false}');}
 
-$log = [];
-$tmp = "/tmp/sbd-" . time();
-mkdir($tmp, 0755, true);
+$log=[];
+$tmp="/tmp/sbd-".time();
+mkdir($tmp,0755,true);
+$zip=$tmp."/repo.zip";
 
-// Download from GitHub
-$zip_url = "https://github.com/SalauddinAhmad/scriptbd/archive/refs/heads/main.zip";
-$zip_file = $tmp . "/repo.zip";
-$data = @file_get_contents($zip_url);
-if (!$data) { die(json_encode(["ok"=>false,"log"=>["DOWNLOAD FAILED"]])); }
-file_put_contents($zip_file, $data);
-$log[] = "Downloaded " . round(strlen($data)/1024) . "KB";
+// Download
+$data=@file_get_contents("https://github.com/SalauddinAhmad/scriptbd/archive/refs/heads/main.zip");
+if(!$data){die(json_encode(["ok"=>false,"error"=>"download failed"]));}
+file_put_contents($zip,$data);
+$log[]="Downloaded ".round(strlen($data)/1024)."KB";
 
-// Extract
-$z = new ZipArchive;
-$z->open($zip_file);
+// Extract  
+$z=new ZipArchive;
+$z->open($zip);
 $z->extractTo($tmp);
 $z->close();
 
-$src = "";
-foreach (scandir($tmp) as $d) {
-    if ($d[0] !== "." && is_dir("$tmp/$d")) { $src = "$tmp/$d"; break; }
+// Find src dir
+$src="";
+foreach(scandir($tmp) as $d){
+  if($d[0]!=="." && is_dir("$tmp/$d")){$src="$tmp/$d";break;}
 }
-$log[] = "Extracted to $src";
+$log[]="Extracted: $src";
 
-// WIPE old files (except deploy.php and cgi-bin)
-$log[] = "Cleaning old files...";
-$wiped = 0;
-foreach (new DirectoryIterator(TARGET) as $item) {
-    if ($item->isDot()) continue;
-    $name = $item->getFilename();
-    if (in_array($name, ["cgi-bin", "deploy.php", ".well-known"])) continue;
-    $p = TARGET . "/" . $name;
-    try {
-        if ($item->isDir()) {
-            $dit = new RecursiveDirectoryIterator($p, RecursiveDirectoryIterator::SKIP_DOTS);
-            $fit = new RecursiveIteratorIterator($dit, RecursiveIteratorIterator::CHILD_FIRST);
-            foreach ($fit as $f) {
-                $f->isDir() ? rmdir($f->getPathname()) : unlink($f->getPathname());
-            }
-            rmdir($p);
-        } else {
-            unlink($p);
-            $wiped++;
-        }
-    } catch (Exception $e) { $log[] = "WARN: " . $name . " - " . $e->getMessage(); }
-}
-$log[] = "Wiped " . $wiped . " files";
-
-// Copy frontend dist to target
-function cpAll($from, $to, &$cnt) {
-    if (!is_dir($from)) return;
-    @mkdir($to, 0755, true);
-    $iter = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($from, RecursiveDirectoryIterator::SKIP_DOTS),
-        RecursiveIteratorIterator::SELF_FIRST
-    );
-    foreach ($iter as $f) {
-        $rel = str_replace($from, "", $f->getPathname());
-        if ($f->isDir()) { @mkdir($to . $rel, 0755, true); }
-        else { copy($f->getPathname(), $to . $rel); $cnt++; }
+// WIPE old files (keep deploy.php only)
+$log[]="Cleaning...";
+$w=0;
+foreach(scandir(TARGET) as $name){
+  if($name==="."||$name==="..")continue;
+  if($name==="deploy.php"||$name==="cgi-bin")continue;
+  $p=TARGET."/".$name;
+  try{
+    if(is_dir($p)){
+      array_map("unlink",glob("$p/*.*"));
+      @rmdir($p);
+    }else{
+      @unlink($p);
+      $w++;
     }
+  }catch(Exception $e){}
+}
+$log[]="Wiped $w";
+
+// Copy frontend/dist  
+function cpdir($from,$to,&$n){
+  if(!is_dir($from))return;
+  @mkdir($to,0755,true);
+  foreach(scandir($from) as $f){
+    if($f==="."||$f==="..")continue;
+    $sf=$from."/".$f;
+    $df=$to."/".$f;
+    if(is_dir($sf)){cpdir($sf,$df,$n);}
+    else{copy($sf,$df);$n++;}
+  }
 }
 
-$count = 0;
-cpAll("$src/frontend/dist", TARGET, $count);
-$log[] = "Frontend: " . $count . " files";
+$count=0;
+cpdir("$src/frontend/dist",TARGET,$count);
+$log[]="Frontend: $count files";
 
-$bcount = 0;
-cpAll("$src/backend", TARGET . "/backend", $bcount);
-$log[] = "Backend: " . $bcount . " files";
+$bcount=0;  
+cpdir("$src/backend",TARGET."/backend",$bcount);
+$log[]="Backend: $bcount files";
 
-// Copy .htaccess
-$hta = "$src/frontend/dist/.htaccess";
-if (file_exists($hta)) {
-    copy($hta, TARGET . "/.htaccess");
-    $log[] = "Copied .htaccess";
-}
-
-// Cleanup temp
+// Cleanup
 exec("rm -rf $tmp");
+$log[]="DONE! ".($count+$bcount)." files";
 
-$total = $count + $bcount;
-$log[] = "DEPLOY COMPLETE: " . $total . " files";
-
-// List current files
-$files = [];
-foreach (new DirectoryIterator(TARGET) as $f) {
-    if (!$f->isDot()) $files[] = $f->getFilename();
-}
-
-echo json_encode([
-    "ok" => true,
-    "files" => $total,
-    "wiped" => $wiped,
-    "log" => $log,
-    "current" => $files
-], JSON_UNESCAPED_UNICODE);
+echo json_encode(["ok"=>true,"files"=>$count+$bcount,"log"=>$log],JSON_UNESCAPED_UNICODE);
