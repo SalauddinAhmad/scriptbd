@@ -16,7 +16,7 @@ jobs:
           echo "🚀 Triggering deploy on scriptbd.com..."
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X GET \
-            "https://scriptbd.com/deploy.php" \
+            "https://scriptbd.com/deploy.php?secret=***" \
             -H "User-Agent: GitHub-Actions-Deploy")
           
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
@@ -30,11 +30,30 @@ jobs:
             exit 1
           fi
           
-          # Check if JSON response has ok:true
           OK=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('ok',False))" 2>/dev/null || echo "False")
           if [ "$OK" != "True" ]; then
             echo "::error::Deploy failed - check response above"
             exit 1
           fi
           
-          echo "✅ Deploy successful!"
+          echo "✅ Auto-deploy complete! scriptbd.com updated."
+
+  build-and-deploy:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+          echo "Build output:"
+          ls -la dist/
+      - name: Upload built files
+        run: |
+          tar -czf deploy-package.tar.gz -C frontend/dist .
+          ls -la deploy-package.tar.gz
