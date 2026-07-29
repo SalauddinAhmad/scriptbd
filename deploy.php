@@ -1,71 +1,70 @@
 <?php
-/**
- * ScriptBD Auto-Deploy — Downloads from GitHub ZIP
- */
 define('SECRET', 'script…cure');
 define('TARGET', '/home/scriptbd_ag/public_html');
 header('Content-Type: application/json');
 date_default_timezone_set('Asia/Dhaka');
-
-$secret = $_GET['secret'] ?? $_SERVER['HTTP_X_DEPLOY_SECRET'] ?? '';
+$secret = $_GET['secret'] ?? ($_SERVER['HTTP_X_DEPLOY_SECRET'] ?? '');
 if ($secret !== SECRET) { http_response_code(403); die('{"ok":false,"error":"unauthorized"}'); }
 
-$log = ["[" . date('H:i:s') . "] Deploy start"];
-$tmp = "/tmp/sbd-" . time();
-mkdir($tmp, 0755, true);
+$log = ["[" . date('H:i:s') . "] Clean deploy start"];
+$tmp = "/tmp/sbd-clean-" . time();
 
-// Download ZIP
+// Download GitHub ZIP
+mkdir($tmp, 0755, true);
 $zip = $tmp . "/repo.zip";
 $data = file_get_contents("https://github.com/SalauddinAhmad/scriptbd/archive/refs/heads/main.zip");
-if (!$data) { echo json_encode(['ok'=>false,'log'=>['Download failed']]); exit(1); }
+if (!$data) { die(json_encode(['ok'=>false,'log'=>['Download failed']])); }
 file_put_contents($zip, $data);
 $log[] = "Downloaded " . round(strlen($data)/1024) . "KB";
 
 // Extract
-$za = new ZipArchive;
-$za->open($zip);
-$za->extractTo($tmp);
-$za->close();
+$z = new ZipArchive;
+$z->open($zip); $z->extractTo($tmp); $z->close();
+$src = ''; foreach (scandir($tmp) as $d) { if ($d[0]!=='.' && is_dir("$tmp/$d")) { $src="$tmp/$d"; break; }}
+$log[] = "Extracted";
 
-// Find extracted dir
-$src = '';
-foreach (scandir($tmp) as $d) {
-    if ($d[0] !== '.' && is_dir("$tmp/$d")) { $src = "$tmp/$d"; break; }
+// DELETE old assets first!
+$old_assets = glob(TARGET . '/assets/*');
+$deleted = 0;
+foreach ($old_assets as $f) {
+    if (is_file($f)) { unlink($f); $deleted++; }
 }
+$log[] = "Deleted $deleted old assets";
 
-// Deploy function
-function deployDir($src, $target, &$log, $label) {
-    if (!is_dir($src)) { $log[] = "$label: not found"; return 0; }
-    $cnt = 0;
-    $iter = new RecursiveIteratorIterator(
+// Delete old index.html to prevent caching
+if (file_exists(TARGET.'/index.html')) { unlink(TARGET.'/index.html'); }
+$log[] = "Removed old index.html";
+
+// Copy frontend/dist
+function cpDir($src, $dest, &$ct) {
+    if (!is_dir($src)) return;
+    @mkdir($dest, 0755, true);
+    foreach (new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator($src, RecursiveDirectoryIterator::SKIP_DOTS),
         RecursiveIteratorIterator::SELF_FIRST
-    );
-    foreach ($iter as $f) {
-        $rel = str_replace($src . '/', '', $f->getPathname());
-        $dest = rtrim($target, '/') . '/' . $rel;
-        if ($f->isDir()) { @mkdir($dest, 0755, true); }
-        else { @copy($f->getPathname(), $dest); $cnt++; }
+    ) as $f) {
+        $rel = str_replace($src, '', $f->getPathname());
+        $d = $dest . $rel;
+        if ($f->isDir()) { @mkdir($d, 0755, true); }
+        else { copy($f->getPathname(), $d); $ct++; }
     }
-    $log[] = "$label: $cnt files";
-    return $cnt;
 }
 
-// Deploy frontend dist
-$total = deployDir("$src/frontend/dist", TARGET, $log, "Frontend");
+$count = 0;
+cpDir("$src/frontend/dist", TARGET, $count);
+$log[] = "Frontend: $count files";
 
-// Deploy backend
-$total += deployDir("$src/backend", TARGET . "/backend", $log, "Backend");
+$bcount = 0;
+cpDir("$src/backend", TARGET . "/backend", $bcount);
+$log[] = "Backend: $bcount files";
 
-// Deploy root index.html
-foreach (glob("$src/*.html") as $f) {
-    $name = basename($f);
-    @copy($f, TARGET . "/$name");
-    $log[] = "Copied $name";
+// Copy .htaccess from dist
+if (file_exists("$src/frontend/dist/.htaccess")) {
+    copy("$src/frontend/dist/.htaccess", TARGET . "/.htaccess");
+    $log[] = "Copied .htaccess";
 }
 
-// Cleanup
 exec("rm -rf $tmp");
-$log[] = "Done! $total total files";
+$log[] = "✅ Deploy complete! " . ($count+$bcount) . " files";
 
-echo json_encode(['ok'=>true, 'files'=>$total, 'log'=>$log], JSON_UNESCAPED_UNICODE);
+echo json_encode(['ok'=>true, 'files'=>$count+$bcount, 'log'=>$log], JSON_UNESCAPED_UNICODE);
