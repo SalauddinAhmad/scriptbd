@@ -1,4 +1,4 @@
-name: 🚀 Deploy to scriptbd.com
+name: 🚀 Auto Deploy to scriptbd.com
 
 on:
   push:
@@ -6,35 +6,35 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm run build
-          echo "=== dist contents ==="
-          ls -la dist/
-
-      - name: Create Deploy Package
-        run: |
-          mkdir -p deploy-pkg
-          cp -r frontend/dist/* deploy-pkg/
-          cp -r backend deploy-pkg/
-          cp index.html deploy-pkg/ 2>/dev/null || true
-          echo "=== Package contents ==="
-          find deploy-pkg -type f | head -30
-          tar -czf deploy.tar.gz -C deploy-pkg .
-
       - name: Deploy via Webhook
         run: |
-          echo "Uploading to server..."
-          curl -v -F "package=@deploy.tar.gz" \
-            "https://scriptbd.com/deploy.php?secret=script…cure"
+          echo "🚀 Triggering deploy on scriptbd.com..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X GET \
+            "https://scriptbd.com/deploy.php" \
+            -H "User-Agent: GitHub-Actions-Deploy")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::warning::Deploy returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+          
+          # Check if JSON response has ok:true
+          OK=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('ok',False))" 2>/dev/null || echo "False")
+          if [ "$OK" != "True" ]; then
+            echo "::error::Deploy failed - check response above"
+            exit 1
+          fi
+          
+          echo "✅ Deploy successful!"
