@@ -6,54 +6,60 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Deploy via Webhook
-        run: |
-          echo "🚀 Triggering deploy on scriptbd.com..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -X GET \
-            "https://scriptbd.com/deploy.php?secret=***" \
-            -H "User-Agent: GitHub-Actions-Deploy")
-          
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          
-          echo "HTTP Status: $HTTP_CODE"
-          echo "Response: $BODY"
-          
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::warning::Deploy returned HTTP $HTTP_CODE"
-            exit 1
-          fi
-          
-          OK=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('ok',False))" 2>/dev/null || echo "False")
-          if [ "$OK" != "True" ]; then
-            echo "::error::Deploy failed - check response above"
-            exit 1
-          fi
-          
-          echo "✅ Auto-deploy complete! scriptbd.com updated."
-
-  build-and-deploy:
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          
       - name: Build Frontend
         working-directory: ./frontend
         run: |
           npm ci
           npm run build
-          echo "Build output:"
+          echo "=== Build output ==="
           ls -la dist/
-      - name: Upload built files
+
+      - name: Create Deploy Package
         run: |
-          tar -czf deploy-package.tar.gz -C frontend/dist .
-          ls -la deploy-package.tar.gz
+          # We need to deploy: frontend/dist + backend + index.html
+          mkdir deploy-pkg
+          cp -r frontend/dist/* deploy-pkg/
+          cp -r backend deploy-pkg/
+          cp index.html deploy-pkg/ 2>/dev/null || true
+          cp deploy.php deploy-pkg/ 2>/dev/null || true
+          cp upload-deploy.php deploy-pkg/ 2>/dev/null || true
+          echo "=== Package contents ==="
+          find deploy-pkg -type f | head -30
+          tar -czf deploy.tar.gz -C deploy-pkg .
+          ls -la deploy.tar.gz
+
+      - name: Upload & Deploy
+        run: |
+          echo "🚀 Uploading deploy package to server..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -F "pkg=@deploy.tar.gz" \
+            "https://scriptbd.com/upload-deploy.php?secret=***" \
+            -H "User-Agent: GitHub-Actions")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          echo "HTTP: $HTTP_CODE"
+          echo "Response: $BODY"
+          
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Upload failed HTTP $HTTP_CODE"
+            exit 1
+          fi
+          
+          OK=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('ok',False))" 2>/dev/null || echo "False")
+          if [ "$OK" != "True" ]; then
+            echo "::error::Deploy failed"
+            exit 1
+          fi
+          
+          echo "✅ LIVE at https://scriptbd.com!"
