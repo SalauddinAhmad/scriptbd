@@ -19,7 +19,7 @@ $log=["TARGET=$TARGET","USER=".get_current_user(),"DOCROOT=".$_SERVER["DOCUMENT_
 // Download from GitHub
 $tmp="/tmp/sbd-".time();
 mkdir($tmp,0755,true);
-$data=@file_get_contents("https://github.com/SalauddinAhmad/scriptbd/archive/refs/heads/main.zip");
+$data=@file_get_contents(..., false, stream_context_create(['http'=>['header'=>'User-Agent: ScriptBD-Deploy/1.0','follow_location'=>1,'timeout'=>30]])) ?: file_get_contents("https://api.github.com/repos/SalauddinAhmad/scriptbd/zipball/main");
 if(!$data){die(json_encode(["ok"=>false,"log"=>$log,"error"=>"download failed"]));}
 file_put_contents($tmp."/repo.zip",$data);
 $log[]="Downloaded ".round(strlen($data)/1024)."KB";
