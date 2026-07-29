@@ -1,7 +1,7 @@
 node_modules/
-# dist/
+dist/
 .env
 *.log
 .DS_Store
-backend/database/schema.sql
 backend/config/database.php
+backend/database/schema.sql
