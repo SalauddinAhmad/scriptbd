@@ -13,36 +13,28 @@ jobs:
       
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           
-      - name: Install & Build Frontend
+      - name: Build Frontend
         working-directory: ./frontend
         run: |
           npm ci
           npm run build
-          echo "Build output:"
+          echo "=== dist contents ==="
           ls -la dist/
-          
+
+      - name: Create Deploy Package
+        run: |
+          mkdir -p deploy-pkg
+          cp -r frontend/dist/* deploy-pkg/
+          cp -r backend deploy-pkg/
+          cp index.html deploy-pkg/ 2>/dev/null || true
+          echo "=== Package contents ==="
+          find deploy-pkg -type f | head -30
+          tar -czf deploy.tar.gz -C deploy-pkg .
+
       - name: Deploy via Webhook
         run: |
-          echo "Triggering deploy on server..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" "https://scriptbd.com/deploy.php?secret=scriptbd-deploy-2026-secure&version=v4&run_id=${{ github.run_id }}")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          
-          echo "HTTP Status: $HTTP_CODE"
-          echo "Response: $BODY"
-          
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::warning::Deploy webhook returned HTTP $HTTP_CODE"
-            exit 1
-          fi
-          
-          # Parse JSON response
-          OK=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('ok',False))" 2>/dev/null || echo "false")
-          if [ "$OK" != "True" ]; then
-            echo "::error::Deploy failed"
-            exit 1
-          fi
-          
-          echo "✅ Deploy successful!"
+          echo "Uploading to server..."
+          curl -v -F "package=@deploy.tar.gz" \
+            "https://scriptbd.com/deploy.php?secret=script…cure"
