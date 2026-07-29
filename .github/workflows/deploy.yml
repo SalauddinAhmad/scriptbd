@@ -1,4 +1,4 @@
-name: 🚀 Auto Deploy to scriptbd.com
+name: 🚀 Auto Deploy
 
 on:
   push:
@@ -9,28 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Deploy on Server
+      - name: Trigger Deploy
         run: |
-          echo "🚀 Triggering deploy..."
-          RESPONSE=$(curl -sS -w "\n%{http_code}" \
-            "https://scriptbd.com/deploy.php?secret=***" \
-            -H "User-Agent: GitHub-Actions")
-          
-          HTTP=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
-          
-          echo "HTTP: $HTTP"
-          echo "Response: $BODY"
-          
-          if [ "$HTTP" != "200" ]; then
-            echo "::error::Deploy trigger failed (HTTP $HTTP)"
-            exit 1
-          fi
-          
-          OK=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ok',False))" 2>/dev/null)
-          if [ "$OK" != "True" ]; then
-            echo "::error::Server deploy failed"
-            exit 1
-          fi
-          
-          echo "✅ scriptbd.com is LIVE!"
+          RESP=$(curl -sS "https://scriptbd.com/_deploy.php?secret=***" -H "User-Agent: GitHub-Actions")
+          echo "$RESP" | python3 -c "import sys,json;d=json.load(sys.stdin);print('\n'.join(d.get('log',[])));exit(0 if d.get('ok') else 1)" && echo "✅ LIVE!" || (echo "❌ FAIL"; exit 1)
